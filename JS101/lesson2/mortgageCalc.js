@@ -106,14 +106,14 @@ const queryValidateApr = repeatQueryValidMaker(
   APRErrorMessage,
   APRIsNullFunc,
   userApr => userApr / 12);
+// If user does not supply APR,
+// monthlyUserApr will be set to DEFAULT_MONTHLY_INTEREST_RATE.
 
 /**
  * @return {{ loanAmount: number,
  *            monthlyUserApr: number,
  *            loanDurationMonths: number }}
  * Asks user for, and validates, loanAmount, userApr, loanDurationMonths.
- * If user does not supply APR,
- * monthlyUserApr will be set to DEFAULT_MONTHLY_INTEREST_RATE.
  */
 function queryAndValidateUser() {
   let monthlyUserApr = queryValidateApr();
