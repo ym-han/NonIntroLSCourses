@@ -144,7 +144,7 @@ function calcLoan(loanAmount, monthlyUserApr, loanDurationMonths) {
 
   return {
     'Monthly Payments': monthlyPayments,
-    'Total Payments': monthlyPayments * loanDurationMonths,
+    'Total Payments': totalPaymts,
     'Total Interest': totalInterest
   };
 }
