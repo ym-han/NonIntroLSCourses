@@ -2,10 +2,10 @@
 
 Assumptions
 -----------
-* loan amount and loan duration should be real numbers in (0, infinity).
+* APR, loan amount and loan duration should be real numbers in (0, infinity).
 * input loan duration should already be in months
 * APR is decimal, and not percentage
-  * Allow APR to be negative, so that users can use it to model
+
 real, as opposed to nominal, interest rates.
   * Use default APR if no APR is supplied
 */
@@ -15,7 +15,7 @@ const readline = require('readline-sync');
 const DEFAULT_MONTHLY_INTEREST_RATE = 0.05 / 12;
 
 // Might be better to initialize config objects from a config file
-const APRReqMessage = "This should be a decimal number like 0.01, and not a percentage. Negative rates are acceptable.";
+const APRReqMessage = "This should be a decimal number like 0.01, and not a percentage; it should also be greater than 0.";
 const APRInfoMessage = "Please supply the Annual Percentage Rate (APR). " + APRReqMessage;
 const APRErrorMessage = APRReqMessage;
 
@@ -40,19 +40,17 @@ function promptGetInput(message) {
 
 
 // --- For validating input
-/**
- * @param {number} num - The putative number
- */
-const notNan = num => !Number.isNaN(num);
+
 function withinOpenInterval(leftBound, rightBound, num) {
   return num > leftBound && num < rightBound;
 }
 const betweenZeroAndInf = num => withinOpenInterval(0, Infinity, num);
+const notNan = num => !Number.isNaN(num);
 
 // change these if want to add further validation
 const loanAmountValidatorFuncs = [notNan, betweenZeroAndInf];
 const loanDurationValidatorFuncs = [notNan, betweenZeroAndInf];
-const APRValidatorFuncs = [notNan];
+const APRValidatorFuncs = [notNan, betweenZeroAndInf];
 
 
 // --- Wrapper functions for querying and validating
@@ -115,7 +113,8 @@ const queryValidateApr = repeatQueryValidMaker(
  *            monthlyUserApr: number,
  *            loanDurationMonths: number }}
  * Asks user for, and validates, loanAmount, userApr, loanDurationMonths.
- * If user does not supply APR, monthlyUserApr will be set to DEFAULT_APR.
+ * If user does not supply APR,
+ * monthlyUserApr will be set to DEFAULT_MONTHLY_INTEREST_RATE.
  */
 function queryAndValidateUser() {
   let monthlyUserApr = queryValidateApr();
@@ -179,16 +178,6 @@ function main() {
   prompt('--------- Loan calculator ------');
 
   while (true) {
-    /*
-    1. Ask for loan amount, APR, and loan duration,
-       while informing user of the assumptions regarding these numbers.
-    2. Validate these numbers;
-       ask again if user does not supply valid loan amount and duration.
-    3. Calculate and tell user
-    the monthly interest rate and loan duration in months
-    4. Ask user if we want to repeat the process with another set of numbers;
-       repeat (or not) accordingly
-    */
     const { loanAmount,
       monthlyUserApr,
       loanDurationMonths } = queryAndValidateUser();
