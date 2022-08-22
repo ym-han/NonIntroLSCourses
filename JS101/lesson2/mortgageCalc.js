@@ -15,7 +15,9 @@ const DEFAULT_MONTHLY_INTEREST_RATE = 0.05 / 12;
 
 // Might be better to initialize config objects from a config file
 const APRReqMessage = "This should be a decimal number like 0.01, and not a percentage; it should also be greater than 0.";
-const APRInfoMessage = "Please supply the Annual Percentage Rate (APR). " + APRReqMessage;
+const APRInfoMessage = "Please supply the Annual Percentage Rate (APR).\n* "
+  + APRReqMessage
+  + `\n* If no APR is supplied, the default, ${DEFAULT_MONTHLY_INTEREST_RATE * 12}, will be used.\n`;
 const APRErrorMessage = APRReqMessage;
 
 const loanAmountDurationReqMessage = "This should be a real number in the open interval (0, infinity).";
