@@ -3,6 +3,7 @@
 Assumptions
 -----------
 * loan amount and loan duration should be real numbers in (0, infinity).
+* input loan duration should already be in months
 * APR is percentage
   * Allow APR to be negative, so that users can use it to model 
 real, as opposed to nominal, interest rates.
@@ -37,14 +38,14 @@ function prompt(message) {
   console.log(`=> ${message}`);
 }
 
-function promptAndQuestion(message) {
+function promptGetInput(message) {
   prompt(message);
   return readline.question();
 }
 
-// checks if supplied putative number string is a Number
+// checks if supplied putative number is a Number
 function validNumber(number) {
-  return number.trimStart() !== '' && Number.isNaN(Number(number));
+  return number.trimStart() !== '' && !Number.isNaN();
 }
 
 function repeatQueryValidMaker(message, nonBasicValidator) {
@@ -55,9 +56,11 @@ function repeatQueryValidMaker(message, nonBasicValidator) {
       prompt("Input invalid!\n")
     }
 
-    queriedNum = promptAndQuestion(message)
-    validNum = validNumber && nonBasicValidator(queriedNum); // TO ADD
-  } while (!validNum); 
+    queriedNum = Number(promptGetInput(message));
+    validNum = [validNumber, nonBasicValidator].every(
+      validator => validator(queriedNum)
+    );
+  } while (!validNum);
 
   return queriedNum;
 }
@@ -69,6 +72,9 @@ const queryValidateLoanDuration = repeatQueryValidMaker(
   loanDurationInfoMessage,
   loanDurationFurtherValidation);
 
+function queryValidateApr() {
+
+}
 
 /* Computes and returns [loanAmount, userApr, loanDuration].
 If user does not supply APR, userApr will be null.
@@ -101,10 +107,11 @@ while (keepRunning) {
   */
 
 
-  let loanAmount, userApr, loanDuration; 
+  let loanAmount, userApr, loanDuration, monthlyInterestRate; 
   [loanAmount, userApr, loanDuration] = queryAndValidateUser();
 
-
+  let monthlyInterestRate = computeMonthlyInterestRate(loanAmount, userApr, loanDuration);
+  prompt(`The monthly interest rate is ${monthlyInterestRate}`);
 
 }
 
