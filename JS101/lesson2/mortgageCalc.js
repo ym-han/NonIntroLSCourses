@@ -5,9 +5,8 @@ Assumptions
 * APR, loan amount and loan duration should be real numbers in (0, infinity).
 * input loan duration should already be in months
 * APR is decimal, and not percentage
-
-real, as opposed to nominal, interest rates.
   * Use default APR if no APR is supplied
+  * Requiring that APR > 0 b/c can get NaN with negative APRs
 */
 
 // -------- Globals
