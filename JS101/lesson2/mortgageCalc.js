@@ -168,7 +168,7 @@ function shouldCalcAnother() {
   do {
     calcAnother = promptGetInput("\nDo you want to do the calculations for another loan? Answer with [(Y)es/(N)o].")
       .toLowerCase();
-  } while (["", "\n"].includes(calcAnother) || !["y", "n", "yes", "no"].includes(calcAnother));
+  } while (!["y", "n", "yes", "no"].includes(calcAnother));
   keepRunning = (calcAnother[0] === "y");
 
   return keepRunning;
