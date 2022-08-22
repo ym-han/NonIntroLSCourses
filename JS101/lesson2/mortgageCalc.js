@@ -4,115 +4,203 @@ Assumptions
 -----------
 * loan amount and loan duration should be real numbers in (0, infinity).
 * input loan duration should already be in months
-* APR is percentage
-  * Allow APR to be negative, so that users can use it to model 
+* APR is decimal, and not percentage
+  * Allow APR to be negative, so that users can use it to model
 real, as opposed to nominal, interest rates.
-  * Use default APR if no APR is supplied 
+  * Use default APR if no APR is supplied
 */
 
-// -------- Key numbers
+// -------- Globals
 const readline = require('readline-sync');
-const DEFAULT_APR = 5.0;
+const DEFAULT_MONTHLY_INTEREST_RATE = 0.05 / 12;
 
-const APRInfoMessage = "Please supply the APR percentage rate; \
-this should be ...."
-const loanAmountInfoMessage = "Please supply the *loan amount*; \
-this should be a real number in the open interval (0, infinity)."
+// Might be better to initialize config objects from a config file
+const APRReqMessage = "This should be a decimal number like 0.01, and not a percentage. Negative rates are acceptable.";
+const APRInfoMessage = "Please supply the Annual Percentage Rate (APR). " + APRReqMessage;
+const APRErrorMessage = APRReqMessage;
 
-const loanDurationInfoMessage = "Please supply the *loan duration*; \
-this should be a real number in the open interval (0, infinity)."
-
-
-let keepRunning = true;
+const loanAmountDurationReqMessage = "This should be a real number in the open interval (0, infinity).";
+const loanAmountInfoMessage = "Please supply the loan amount. " + loanAmountDurationReqMessage;
+const loanDurationInfoMessage = "Please supply the loan duration, in months. " + loanAmountDurationReqMessage;
+const loanAmountErrorMessage = loanAmountDurationReqMessage;
+const loanDurationErrorMessage = loanAmountDurationReqMessage;
 
 
 // -------- Helper functions
 
-const betweenZeroAndInf = num => num > 0 && num < Infinity;
-const loanAmountFurtherValidation = betweenZeroAndInf; 
-// change this if want to add further validation
-const loanDurationFurtherValidation = betweenZeroAndInf;
-
-
+// --- For getting input
 function prompt(message) {
-  console.log(`=> ${message}`);
+  console.log(`${message}`);
 }
 
 function promptGetInput(message) {
   prompt(message);
-  return readline.question();
+  return readline.question().trim();
 }
 
-// checks if supplied putative number is a Number
-function validNumber(number) {
-  return number.trimStart() !== '' && !Number.isNaN();
+
+// --- For validating input
+/**
+ * @param {number} num - The putative number
+ */
+const notNan = num => !Number.isNaN(num);
+function withinOpenInterval(leftBound, rightBound, num) {
+  return num > leftBound && num < rightBound;
+}
+const betweenZeroAndInf = num => withinOpenInterval(0, Infinity, num);
+
+// change these if want to add further validation
+const loanAmountValidatorFuncs = [notNan, betweenZeroAndInf];
+const loanDurationValidatorFuncs = [notNan, betweenZeroAndInf];
+const APRValidatorFuncs = [notNan];
+
+
+// --- Wrapper functions for querying and validating
+/**
+ * @param {string} queryMessage - The message to query user with
+ * @param {Array{number => boolean}}
+ *        numValidatorFuncs - Functions to validate the parsed number
+ * @param {string} invalidInputMessage - Message to display if input invalid
+ * @param {{() => number} | undefined}
+ *        numIfInputNullFunc - Function to call if input string is "" or "\n"
+ * @param {number => number}
+ *        userNumPostProcessFunc - For post processing parsed number
+ */
+function repeatQueryValidMaker(
+  queryMessage, numValidatorFuncs, invalidInputMessage = "Input invalid!", numIfInputNullFunc = undefined, userNumPostProcessFunc = num => num
+) {
+  function configuredQueryValidate() {
+    let trimdUserNumString, userNum, numIsValid;
+
+    do {
+      if (numIfInputNullFunc !== undefined && ["", "\n"].includes(trimdUserNumString)) {
+        userNum = numIfInputNullFunc();
+      } else if (numIsValid === false) {
+        prompt(invalidInputMessage);
+        // Could improve this by pinpointing the validation step that failed
+      }
+
+      trimdUserNumString = promptGetInput(queryMessage);
+      userNum = userNumPostProcessFunc(Number(trimdUserNumString));
+
+      const userNumCopy = userNum;
+      numIsValid = trimdUserNumString !== '' && numValidatorFuncs.every(validator => validator(userNumCopy));
+    } while (!numIsValid);
+
+    return userNum;
+  }
+  return configuredQueryValidate;
 }
 
-function repeatQueryValidMaker(message, nonBasicValidator) {
-  let queriedNum, validNum;
-
-  do {
-    if (validNum === false) {
-      prompt("Input invalid!\n")
-    }
-
-    queriedNum = Number(promptGetInput(message));
-    validNum = [validNumber, nonBasicValidator].every(
-      validator => validator(queriedNum)
-    );
-  } while (!validNum);
-
-  return queriedNum;
-}
-
+// Initializing the maker func with specific configs
 const queryValidateLoanAmount = repeatQueryValidMaker(
   loanAmountInfoMessage,
-  loanAmountFurtherValidation);
+  loanAmountValidatorFuncs,
+  loanAmountErrorMessage);
 const queryValidateLoanDuration = repeatQueryValidMaker(
   loanDurationInfoMessage,
-  loanDurationFurtherValidation);
+  loanDurationValidatorFuncs,
+  loanDurationErrorMessage);
 
-function queryValidateApr() {
+const APRIsNullFunc = () => DEFAULT_MONTHLY_INTEREST_RATE;
+const queryValidateApr = repeatQueryValidMaker(
+  APRInfoMessage,
+  APRValidatorFuncs,
+  APRErrorMessage,
+  APRIsNullFunc,
+  userApr => userApr / 12);
 
-}
-
-/* Computes and returns [loanAmount, userApr, loanDuration].
-If user does not supply APR, userApr will be null.
-The other values will not be null: user will be asked again for them if they
-are not supplied.
-*/
+/**
+ * @return {{ loanAmount: number,
+ *            monthlyUserApr: number,
+ *            loanDurationMonths: number }}
+ * Asks user for, and validates, loanAmount, userApr, loanDurationMonths.
+ * If user does not supply APR, monthlyUserApr will be set to DEFAULT_APR.
+ */
 function queryAndValidateUser() {
-  let userApr = null;
-  userApr = queryValidateApr();
-
+  let monthlyUserApr = queryValidateApr();
   let loanAmount = queryValidateLoanAmount();
-  let loanDuration = queryValidateLoanDuration();
+  let loanDurationMonths = queryValidateLoanDuration();
 
-  return [loanAmount, userApr, loanDuration];
+  return {
+    loanAmount: loanAmount,
+    monthlyUserApr: monthlyUserApr,
+    loanDurationMonths: loanDurationMonths
+  };
 }
 
+
+function calcLoan(loanAmount, monthlyUserApr, loanDurationMonths) {
+  // do computation in log space to help with numerical stability
+  let logMonthlyPayments = Math.log(loanAmount)
+    + Math.log(monthlyUserApr)
+    - Math.log(
+      1 - Math.pow((1 + monthlyUserApr), (-loanDurationMonths))
+    );
+  let monthlyPayments = Math.exp(logMonthlyPayments);
+
+  let totalPaymts = Math.exp(logMonthlyPayments + Math.log(loanDurationMonths));
+  let totalInterest = totalPaymts - loanAmount;
+
+  return {
+    'Monthly Payments': monthlyPayments,
+    'Total Payments': monthlyPayments * loanDurationMonths,
+    'Total Interest': totalInterest
+  };
+}
+
+function displayResults(loanDurationMonths, calcOutput) {
+  console.log("\n==== RESULTS ===================\n");
+  console.log("=> Loan duration in months: " + loanDurationMonths + "\n");
+  for (const [key, value] of Object.entries(calcOutput)) {
+    console.log(`=> ${key}: $${value.toFixed(2)}\n`);
+    // a better rounding solution might be https://stackoverflow.com/questions/15762768/javascript-math-round-to-two-decimal-places
+  }
+  console.log("===============================\n");
+}
+
+/**
+ * @return {boolean}
+ * Check if we want to run calculator again.
+ */
+function shouldCalcAnother() {
+  let calcAnother, keepRunning;
+  do {
+    calcAnother = promptGetInput("\nDo you want to do the calculations for another loan? Answer with [(Y)es/(N)o].")
+      .toLowerCase();
+  } while (["", "\n"].includes(calcAnother) || (calcAnother[0] !== "y" && calcAnother[0] !== "n"));
+  keepRunning = (calcAnother[0] === "y");
+
+  return keepRunning;
+}
 
 // -------- Main logic
-prompt('--------- Loan calculator ------');
+function main() {
+  prompt('--------- Loan calculator ------');
 
-while (keepRunning) {
-  /*
-  1. Ask for loan amount, APR, and loan duration, 
-     while informing user of the assumptions regarding these numbers.
-  2. Validate these numbers; 
-     ask again if user does not supply valid loan amount and duration.
-  3. Calculate and tell user the monthly interest rate and loan duration in months
-  4. Ask user if we want to repeat the process with another set of numbers;
-     repeat (or not) accordingly
-  */
+  while (true) {
+    /*
+    1. Ask for loan amount, APR, and loan duration,
+       while informing user of the assumptions regarding these numbers.
+    2. Validate these numbers;
+       ask again if user does not supply valid loan amount and duration.
+    3. Calculate and tell user
+    the monthly interest rate and loan duration in months
+    4. Ask user if we want to repeat the process with another set of numbers;
+       repeat (or not) accordingly
+    */
+    const { loanAmount,
+      monthlyUserApr,
+      loanDurationMonths } = queryAndValidateUser();
+    const calcOutput = calcLoan(loanAmount, monthlyUserApr, loanDurationMonths);
 
+    displayResults(loanDurationMonths, calcOutput);
 
-  let loanAmount, userApr, loanDuration, monthlyInterestRate; 
-  [loanAmount, userApr, loanDuration] = queryAndValidateUser();
-
-  let monthlyInterestRate = computeMonthlyInterestRate(loanAmount, userApr, loanDuration);
-  prompt(`The monthly interest rate is ${monthlyInterestRate}`);
-
+    if (!shouldCalcAnother()) {
+      console.log("\nGoodbye!\n");
+      break;
+    }
+  }
 }
 
-
+main();
