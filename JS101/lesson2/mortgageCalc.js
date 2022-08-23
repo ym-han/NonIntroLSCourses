@@ -30,12 +30,9 @@ const loanDurationErrorMessage = loanAmountDurationReqMessage;
 // -------- Helper functions
 
 // --- For getting input
-function prompt(message) {
-  console.log(`${message}`);
-}
 
 function promptGetInput(message) {
-  prompt(message);
+  console.log(message);
   return readline.question().trim();
 }
 
@@ -75,7 +72,7 @@ function repeatQueryValidMaker(
       if (numIfInputNullFunc !== undefined && ["", "\n"].includes(trimdUserNumString)) {
         userNum = numIfInputNullFunc();
       } else if (numIsValid === false) {
-        prompt(invalidInputMessage);
+        console.log(invalidInputMessage);
         // Could improve this by pinpointing the validation step that failed
       }
 
@@ -176,7 +173,7 @@ function shouldCalcAnother() {
 
 // -------- Main logic
 function main() {
-  prompt('--------- Loan calculator ------');
+  console.log('--------- Loan calculator ------');
 
   while (true) {
     const { loanAmount,
